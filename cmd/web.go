@@ -15,8 +15,6 @@ import (
 	"github.com/Unknwon/macaron"
 	"github.com/codegangsta/cli"
 	"github.com/macaron-contrib/cache"
-	"github.com/macaron-contrib/captcha"
-	"github.com/macaron-contrib/i18n"
 	"github.com/macaron-contrib/session"
 	"github.com/macaron-contrib/toolbox"
 
@@ -30,8 +28,8 @@ import (
 	"github.com/MessageDream/drift/modules/setting"
 	"github.com/MessageDream/drift/routers"
 	"github.com/MessageDream/drift/routers/admin"
-	"github.com/MessageDream/drift/routers/user"
 	"github.com/MessageDream/drift/routers/dev"
+	"github.com/MessageDream/drift/routers/user"
 )
 
 var CmdWeb = cli.Command{
@@ -72,17 +70,11 @@ func newMacaron() *macaron.Macaron {
 		Funcs:      []template.FuncMap{base.TemplateFuncs},
 		IndentJSON: macaron.Env != macaron.PROD,
 	}))
-	m.Use(i18n.I18n(i18n.Options{
-		Langs:    setting.Langs,
-		Names:    setting.Names,
-		Redirect: true,
-	}))
 	m.Use(cache.Cacher(cache.Options{
 		Adapter:  setting.CacheAdapter,
 		Interval: setting.CacheInternal,
 		Conn:     setting.CacheConn,
 	}))
-	m.Use(captcha.Captchaer())
 	m.Use(session.Sessioner(session.Options{
 		Provider: setting.SessionProvider,
 		Config:   *setting.SessionConfig,
@@ -188,7 +180,6 @@ func runWeb(*cli.Context) {
 	if macaron.Env == macaron.DEV {
 		m.Get("/template/*", dev.TemplatePreview)
 	}
-
 
 	// Not found handler.
 	m.NotFound(routers.NotFound)

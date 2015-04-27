@@ -1,8 +1,8 @@
 package models
 
 import (
-	"gopkg.in/mgo.v2/bson"
 	mgo "gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"time"
 )
 
@@ -20,32 +20,15 @@ type Category struct {
 
 func (category *Category) CreatCategory(db *mgo.Database) error {
 	//category.Id_ = bson.NewObjectId()
-	c := DB.C("category")
+	c := db.C(ColCategory)
 	err := c.Insert(category)
-	SetAppCategories()
+	SetAppCategories(db)
 	return err
 }
 
-func (category *Category) UpdateCategory() error {
-	c := DB.C("category")
+func (category *Category) UpdateCategory(db *mgo.Database) error {
+	c := db.C(ColCategory)
 	err := c.UpdateId(category.Id_, category)
-	SetAppCategories()
+	SetAppCategories(db)
 	return err
 }
-
-// func (category *Category) GetAllNodes() *[]Node {
-// 	c := DB.C("node")
-// 	var nodes []Node
-// 	c.Find(&bson.M{"_cid": category.Id_}).All(&nodes)
-// 	return &nodes
-// }
-
-// func (category *Category) SetNodeId(nid bson.ObjectId) {
-// 	if category.NodeIds != nil {
-// 		category.NodeIds = append(category.NodeIds, nid)
-// 		removeDuplicate(&category.NodeIds)
-// 	} else {
-// 		category.NodeIds = []bson.ObjectId{nid}
-// 	}
-// 	category.NodeCount = len(category.NodeIds)
-// }

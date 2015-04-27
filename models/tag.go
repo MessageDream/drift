@@ -15,8 +15,8 @@ type TagWrapper struct {
 	ArticleIds   []bson.ObjectId
 }
 
-func (tag *TagWrapper) SetTag() error {
-	c := DB.C("tags")
+func (tag *TagWrapper) SetTag(db *mgo.Database) error {
+	c := db.C(ColTags)
 	var err error
 	flag := false
 	for _, v := range Tags {
@@ -39,6 +39,6 @@ func (tag *TagWrapper) SetTag() error {
 		err = c.Insert(tag)
 	}
 
-	SetAppTags()
+	SetAppTags(db)
 	return err
 }
