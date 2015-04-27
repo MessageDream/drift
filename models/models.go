@@ -13,8 +13,13 @@ import (
 )
 
 const (
-	TypeTopic     = 'T'
-	TypeArticle   = 'A'
+	ColArticle      = "article"
+	ColCategory     = "category"
+	ColNode         = "node"
+	ColTags         = "tags"
+	ColSubscription = "subscription"
+	ColUser         = "user"
+
 	DefaultAvatar = "gopher_teal.jpg"
 
 	ADS                = "ads"
@@ -33,8 +38,11 @@ const (
 
 var (
 	DbCfg struct {
-		Type, Host, Port, Name, User, Pwd, Path, SslMode, LogMode string
+		Type, Host, Port, Name, User, Pwd, Path, LogMode string
 	}
+
+	Categories []Category   //常驻内存
+	Tags       []TagWrapper //常驻内存
 )
 
 func LoadModelsConfig() {
@@ -45,7 +53,6 @@ func LoadModelsConfig() {
 	if len(DbCfg.Pwd) == 0 {
 		DbCfg.Pwd = setting.Cfg.MustValue("database", "PASSWD")
 	}
-	DbCfg.SslMode = setting.Cfg.MustValue("database", "SSL_MODE")
 	DbCfg.LogMode = setting.Cfg.MustValue("database", "LOG_MODE")
 	DbCfg.Path = setting.Cfg.MustValue("database", "PATH", "data/gogs.db")
 }
@@ -56,7 +63,7 @@ func GetSession() (*mgo.Session, error) {
 	return mgo.Dial(cnnstr)
 }
 
-func GetDb(se *mgo.Session) *mgo.Database {
+func getDb(se *mgo.Session) *mgo.Database {
 	return se.DB(DbCfg.Name)
 }
 
@@ -95,46 +102,17 @@ func Ping() error {
 	return se.Ping()
 }
 
-
-
-var (
-DB         *mgo.Database
-Categories []Category   //常驻内存
-Tags       []TagWrapper //常驻内存
-)
-
-func InitDb() {
-
-	conn := common.Webconfig.Dbconn
-	if conn == "" {
-		beego.Error("数据库地址还没有配置,请到config内配置db字段.")
-		os.Exit(1)
-	}
-
-	session, err := mgo.Dial(conn)
-	if err != nil {
-		beego.Error("MongoDB连接失败:", err.Error())
-		os.Exit(1)
-	}
-
-	session.SetMode(mgo.Monotonic, true)
-
-	DB = session.DB("messageblog")
-	SetAppCategories()
-	SetAppTags()
+func SetAppCategories(db *mgo.Database) {
+	Categories, _ = GetAllCategory(db)
 }
 
-func SetAppCategories() {
-	Categories, _ = GetAllCategory()
-}
-
-func SetAppTags() {
-	tags, _ := GetAllTags()
+func SetAppTags(db *mgo.Database) {
+	tags, _ := GetAllTags(db)
 	Tags = *tags
 }
 
-func GetArticles(condition *bson.M, offset int, limit int, sort string) (*[]Article, int, error) {
-	c := DB.C("article")
+func GetArticles(db *mgo.Database, condition *bson.M, offset int, limit int, sort string) (*[]Article, int, error) {
+	c := db.C(ColArticle)
 	var article []Article
 	query := c.Find(condition).Skip(offset).Limit(limit)
 	if sort != "" {
@@ -145,7 +123,7 @@ func GetArticles(condition *bson.M, offset int, limit int, sort string) (*[]Arti
 	return &article, total, err
 }
 
-func GetArticlesByTag(tagname string, offset int, limit int, sort string) (*[]Article, int, error) {
+func GetArticlesByTag(db *mgo.Database, tagname string, offset int, limit int, sort string) (*[]Article, int, error) {
 	var tag TagWrapper
 	for _, v := range Tags {
 		if tagname == v.Name {
@@ -153,38 +131,38 @@ func GetArticlesByTag(tagname string, offset int, limit int, sort string) (*[]Ar
 			break
 		}
 	}
-	return GetArticles(&bson.M{"_id": bson.M{"$in": tag.ArticleIds}}, offset, limit, sort)
+	return GetArticles(db, &bson.M{"_id": bson.M{"$in": tag.ArticleIds}}, offset, limit, sort)
 }
 
-func GetArticlesByNode(condition *bson.M, offset int, limit int, sort string) (*[]Article, int, error) {
-	return GetArticles(condition, offset, limit, sort)
+func GetArticlesByNode(db *mgo.Database, condition *bson.M, offset int, limit int, sort string) (*[]Article, int, error) {
+	return GetArticles(db, condition, offset, limit, sort)
 }
 
-func GetArticleCount() int {
-	c := DB.C("article")
+func GetArticleCount(db *mgo.Database) int {
+	c := db.C(ColArticle)
 	total, _ := c.Count()
 	return total
 }
 
-func GetArticle(condition *bson.M) (*Article, error) {
-	c := DB.C("article")
+func GetArticle(db *mgo.Database, condition *bson.M) (*Article, error) {
+	c := db.C(ColArticle)
 	var article Article
 	err := c.Find(condition).One(&article)
 	return &article, err
 }
 
-func DeleteArticles(condition *bson.M) (*mgo.ChangeInfo, error) {
-	c := DB.C("article")
+func DeleteArticles(db *mgo.Database, condition *bson.M) (*mgo.ChangeInfo, error) {
+	c := db.C(ColArticle)
 	return c.RemoveAll(condition)
 }
 
-func DeleteArticle(condition *bson.M) error {
-	c := DB.C("article")
+func DeleteArticle(db *mgo.Database, condition *bson.M) error {
+	c := db.C(ColArticle)
 	return c.Remove(condition)
 }
 
-func GetTags(condition *bson.M, offset int, limit int, sort string) (*[]TagWrapper, int, error) {
-	c := DB.C("tags")
+func GetTags(db *mgo.Database, condition *bson.M, offset int, limit int, sort string) (*[]TagWrapper, int, error) {
+	c := db.C(ColTags)
 	var tags []TagWrapper
 	query := c.Find(condition).Skip(offset).Limit(limit)
 	if sort != "" {
@@ -196,8 +174,8 @@ func GetTags(condition *bson.M, offset int, limit int, sort string) (*[]TagWrapp
 	return &tags, total, err
 }
 
-func GetAllTags() (*[]TagWrapper, error) {
-	c := DB.C("tags")
+func GetAllTags(db *mgo.Database) (*[]TagWrapper, error) {
+	c := db.C(ColTags)
 	var tags []TagWrapper
 	err := c.Find(&bson.M{}).All(&tags)
 	return &tags, err
@@ -207,8 +185,8 @@ func GetTagCount() int {
 	return len(Tags)
 }
 
-func GetAllCategory() ([]Category, error) {
-	c := DB.C("category")
+func GetAllCategory(db *mgo.Database) ([]Category, error) {
+	c := db.C(ColCategory)
 	var categories []Category
 	err := c.Find(bson.M{}).Sort("createdtime").All(&categories)
 	return categories, err
@@ -224,6 +202,7 @@ func GetCategoryById(id bson.ObjectId) Category {
 	}
 	return category
 }
+
 func GetCategoryNodeName(nname string) Category {
 	var category Category
 	for _, v := range Categories {
@@ -241,15 +220,15 @@ func GetCategoryNodeName(nname string) Category {
 	return category
 }
 
-func DeleteCategory(condition *bson.M) error {
-	c := DB.C("category")
+func DeleteCategory(db *mgo.Database, condition *bson.M) error {
+	c := db.C(ColCategory)
 	err := c.Remove(condition)
-	SetAppCategories()
+	SetAppCategories(db)
 	return err
 }
 
-func GetSubscribes(condition *bson.M, offset int, limit int, sort string) (*[]Subscription, int, error) {
-	c := DB.C("subscription")
+func GetSubscribes(db *mgo.Database, condition *bson.M, offset int, limit int, sort string) (*[]Subscription, int, error) {
+	c := db.C(ColSubscription)
 	var subs []Subscription
 	query := c.Find(condition).Skip(offset).Limit(limit)
 	if sort != "" {

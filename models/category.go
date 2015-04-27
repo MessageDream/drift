@@ -2,6 +2,7 @@ package models
 
 import (
 	"gopkg.in/mgo.v2/bson"
+	mgo "gopkg.in/mgo.v2"
 	"time"
 )
 
@@ -17,7 +18,7 @@ type Category struct {
 	Nodes       []Node
 }
 
-func (category *Category) CreatCategory() error {
+func (category *Category) CreatCategory(db *mgo.Database) error {
 	//category.Id_ = bson.NewObjectId()
 	c := DB.C("category")
 	err := c.Insert(category)

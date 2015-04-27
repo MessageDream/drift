@@ -42,11 +42,11 @@ func (c *Comment) CanDelete(username string, db *mgo.Database) bool {
 	return user.IsSuperuser
 }
 
-// 主题
-func (c *Comment) Topic(db *mgo.Database) *Topic {
-	// 内容
-	var topic Topic
-	c_ := db.C(CONTENTS)
-	c_.Find(bson.M{"_id": c.ContentId, "content.type": TypeTopic}).One(&topic)
-	return &topic
-}
+//// 主题
+//func (c *Comment) Topic(db *mgo.Database) *Topic {
+//	// 内容
+//	var topic Topic
+//	c_ := db.C(CONTENTS)
+//	c_.Find(bson.M{"_id": c.ContentId, "content.type": TypeTopic}).One(&topic)
+//	return &topic
+//}

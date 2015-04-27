@@ -1,11 +1,12 @@
 package models
 
 import (
-"gopkg.in/mgo.v2/bson"
-	"time"
-	"strings"
+	mgo "gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"html/template"
 	"regexp"
+	"strings"
+	"time"
 )
 
 type Article struct {
@@ -31,7 +32,6 @@ func (article *Article) SetSummary() {
 		article.Summary = article.Text
 	} else {
 		strs := strings.Split(string(article.Text), "<!--more-->")
-		//beego.Error(strs[0])
 		n := len(strs)
 		if n > 0 {
 			article.Summary = template.HTML(strs[0])
@@ -42,7 +42,6 @@ func (article *Article) SetSummary() {
 func (article *Article) GetFirstParagraph() *template.HTML {
 	rx := regexp.MustCompile(`<p>(.*)</p>`)
 	p := rx.FindStringSubmatch(string(article.Text))
-	//beego.Error(p)
 	n := len(p)
 	if n > 1 {
 		rep := template.HTML(p[1] + "...")
@@ -52,10 +51,6 @@ func (article *Article) GetFirstParagraph() *template.HTML {
 }
 
 func (article *Article) GetCategory() *Category {
-	// c := DB.C("category")
-	// var category Category
-	// c.Find(bson.M{"name": article.CName}).One(&category)
-	// return &category
 	var category Category
 	for _, v := range Categories {
 		if v.Name == article.CName {
@@ -87,16 +82,16 @@ func (article *Article) GetTags() *[]TagWrapper {
 	return article.GetSelfTags()
 }
 
-func (article *Article) CreatArticle() error {
+func (article *Article) CreatArticle(db *mgo.Database) error {
 	article.Id_ = bson.NewObjectId()
-	c := DB.C("article")
+	c := db.C(ColArticle)
 	err := c.Insert(article)
 	go setTags(&article.Tags, article.Id_)
 	return err
 }
 
-func (article *Article) UpdateArticle() error {
-	c := DB.C("article")
+func (article *Article) UpdateArticle(db *mgo.Database) error {
+	c := db.C(ColArticle)
 	err := c.UpdateId(article.Id_, article)
 	go setTags(&article.Tags, article.Id_)
 
@@ -107,16 +102,16 @@ func (article *Article) GetCommentCount() int {
 	return 1
 }
 
-func (article *Article) GetAroundArticle() (*Article, *Article, error) {
-	c := DB.C("article")
+func (article *Article) GetAroundArticle(db *mgo.Database) (*Article, *Article, error) {
+	c := db.C(ColArticle)
 	var preresult, nextresult Article
 	err := c.Find(&bson.M{"createdtime": &bson.M{"$lt": article.CreatedTime}}).Sort("-createdtime").Limit(1).One(&preresult)
 
-err = c.Find(&bson.M{"createdtime": &bson.M{"$gt": article.CreatedTime}}).Sort("createdtime").Limit(1).One(&nextresult)
-return &preresult, &nextresult, err
+	err = c.Find(&bson.M{"createdtime": &bson.M{"$gt": article.CreatedTime}}).Sort("createdtime").Limit(1).One(&nextresult)
+	return &preresult, &nextresult, err
 }
 
-func (article *Article) GetSameTagArticles(limit int) (articles []Article) {
+func (article *Article) GetSameTagArticles(db *mgo.Database, limit int) (articles []Article) {
 	ids := make([]bson.ObjectId, 0)
 	for _, v := range Tags {
 		for _, tag := range article.Tags {
@@ -129,9 +124,9 @@ func (article *Article) GetSameTagArticles(limit int) (articles []Article) {
 			}
 		}
 	}
-	d := DB.C("article")
-	d.Find(&bson.M{"_id": &bson.M{"$in": ids}}).Limit(limit).All(&articles)
-return
+	c := db.C(ColArticle)
+	c.Find(&bson.M{"_id": &bson.M{"$in": ids}}).Limit(limit).All(&articles)
+	return
 }
 
 func (article *Article) GetSelfTags() *[]TagWrapper {
@@ -160,7 +155,7 @@ func (article *Article) HasSummary() bool {
 	return true
 }
 
-func (article *Article) UpdateViews() {
+func (article *Article) UpdateViews(db *mgo.Database) {
 	article.Views++
-	article.UpdateArticle()
+	article.UpdateArticle(db)
 }
