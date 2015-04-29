@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package user
+package admin
 
 import (
 	"strings"
@@ -99,7 +99,7 @@ func SettingsPasswordPost(ctx *middleware.Context, form auth.ChangePasswordForm)
 	}
 
 	tmpUser := &models.User{
-		Passwd: form.OldPassword,
+		Password: form.OldPassword,
 		Salt:   ctx.User.Salt,
 	}
 	tmpUser.EncodePasswd()
@@ -120,114 +120,6 @@ func SettingsPasswordPost(ctx *middleware.Context, form auth.ChangePasswordForm)
 	}
 
 	ctx.Redirect("/user/settings/password")
-}
-
-func SettingsSSHKeys(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
-	ctx.Data["PageIsSettingsSSHKeys"] = true
-
-	var err error
-	ctx.Data["Keys"], err = models.ListPublicKey(ctx.User.Id)
-	if err != nil {
-		ctx.Handle(500, "ssh.ListPublicKey", err)
-		return
-	}
-
-	ctx.HTML(200, SETTINGS_SSH_KEYS)
-}
-
-func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
-	ctx.Data["PageIsSettingsSSHKeys"] = true
-
-	var err error
-	ctx.Data["Keys"], err = models.ListPublicKey(ctx.User.Id)
-	if err != nil {
-		ctx.Handle(500, "ssh.ListPublicKey", err)
-		return
-	}
-
-	// Delete SSH key.
-	if ctx.Query("_method") == "DELETE" {
-		id := com.StrTo(ctx.Query("id")).MustInt64()
-		if id <= 0 {
-			return
-		}
-
-		if err = models.DeletePublicKey(&models.PublicKey{Id: id}); err != nil {
-			ctx.Handle(500, "DeletePublicKey", err)
-		} else {
-			log.Trace("SSH key deleted: %s", ctx.User.Name)
-			ctx.Redirect("/user/settings/ssh")
-		}
-		return
-	}
-
-	// Add new SSH key.
-	if ctx.Req.Method == "POST" {
-		if ctx.HasError() {
-			ctx.HTML(200, SETTINGS_SSH_KEYS)
-			return
-		}
-
-		// Remove newline characters from form.KeyContent
-		cleanContent := strings.Replace(form.Content, "\n", "", -1)
-
-		if ok, err := models.CheckPublicKeyString(cleanContent); !ok {
-			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
-			ctx.Redirect("/user/settings/ssh")
-			return
-		}
-
-		k := &models.PublicKey{
-			OwnerId: ctx.User.Id,
-			Name:    form.SSHTitle,
-			Content: cleanContent,
-		}
-		if err := models.AddPublicKey(k); err != nil {
-			if err == models.ErrKeyAlreadyExist {
-				ctx.RenderWithErr(ctx.Tr("form.ssh_key_been_used"), SETTINGS_SSH_KEYS, &form)
-				return
-			}
-			ctx.Handle(500, "ssh.AddPublicKey", err)
-			return
-		} else {
-			log.Trace("SSH key added: %s", ctx.User.Name)
-			ctx.Flash.Success(ctx.Tr("settings.add_key_success"))
-			ctx.Redirect("/user/settings/ssh")
-			return
-		}
-	}
-
-	ctx.HTML(200, SETTINGS_SSH_KEYS)
-}
-
-func SettingsSocial(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
-	ctx.Data["PageIsSettingsSocial"] = true
-
-	// Unbind social account.
-	remove, _ := com.StrTo(ctx.Query("remove")).Int64()
-	if remove > 0 {
-		if err := models.DeleteOauth2ById(remove); err != nil {
-			ctx.Handle(500, "DeleteOauth2ById", err)
-			return
-		}
-		ctx.Flash.Success(ctx.Tr("settings.unbind_success"))
-		ctx.Redirect("/user/settings/social")
-		return
-	}
-
-	socials, err := models.GetOauthByUserId(ctx.User.Id)
-	if err != nil {
-		ctx.Handle(500, "GetOauthByUserId", err)
-		return
-	}
-	ctx.Data["Socials"] = socials
-	ctx.HTML(200, SETTINGS_SOCIAL)
 }
 
 func SettingsDelete(ctx *middleware.Context) {

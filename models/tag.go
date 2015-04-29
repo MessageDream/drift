@@ -1,8 +1,9 @@
 package models
 
 import (
-	"gopkg.in/mgo.v2/bson"
 	"time"
+	mgo "gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 type TagWrapper struct {

@@ -19,7 +19,6 @@ type Category struct {
 }
 
 func (category *Category) CreatCategory(db *mgo.Database) error {
-	//category.Id_ = bson.NewObjectId()
 	c := db.C(ColCategory)
 	err := c.Insert(category)
 	SetAppCategories(db)

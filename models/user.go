@@ -1,21 +1,21 @@
 package models
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"errors"
-	"fmt"
-	"strings"
+//	"crypto/sha256"
+//	"encoding/hex"
+//	"fmt"
+//	"strings"
 	"sync"
 	"time"
+	"errors"
 
-	"github.com/Unknwon/com"
-	mgo "gopkg.in/mgo.v2"
+//	"github.com/Unknwon/com"
+//	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	"github.com/MessageDream/drift/modules/base"
-	"github.com/MessageDream/drift/modules/log"
-	"github.com/MessageDream/drift/modules/setting"
+//	"github.com/MessageDream/drift/modules/base"
+// 	"github.com/MessageDream/drift/modules/log"
+// 	"github.com/MessageDream/drift/modules/setting"
 )
 
 type UserType int

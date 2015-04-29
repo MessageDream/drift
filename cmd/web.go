@@ -29,7 +29,6 @@ import (
 	"github.com/MessageDream/drift/routers"
 	"github.com/MessageDream/drift/routers/admin"
 	"github.com/MessageDream/drift/routers/dev"
-	"github.com/MessageDream/drift/routers/user"
 )
 
 var CmdWeb = cli.Command{

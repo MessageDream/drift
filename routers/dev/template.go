@@ -12,7 +12,7 @@ import (
 )
 
 func TemplatePreview(ctx *middleware.Context) {
-	ctx.Data["User"] = models.User{Name: "Unknown"}
+	ctx.Data["User"] = models.User{UserName: "Unknown"}
 	ctx.Data["AppName"] = setting.AppName
 	ctx.Data["AppVer"] = setting.AppVer
 	ctx.Data["AppUrl"] = setting.AppUrl
