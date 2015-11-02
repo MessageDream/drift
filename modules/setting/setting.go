@@ -6,6 +6,7 @@ package setting
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -29,10 +30,11 @@ const (
 
 var (
 	// App settings.
-	AppVer  string
-	AppName string
-	AppLogo string
-	AppUrl  string
+	AppVer    string
+	AppName   string
+	AppLogo   string
+	AppUrl    string
+	AppSubUrl string
 
 	// Server settings.
 	Protocol           Scheme
@@ -146,6 +148,13 @@ func NewConfigContext() {
 		AppUrl += "/"
 	}
 
+	// Check if has app suburl.
+	appUrl, err := url.Parse(AppUrl)
+	if err != nil {
+		log.Fatal(4, "Invalid ROOT_URL(%s): %s", AppUrl, err)
+	}
+	AppSubUrl = strings.TrimSuffix(appUrl.Path, "/")
+
 	Protocol = HTTP
 	if sec.Key("PROTOCOL").String() == "https" {
 		Protocol = HTTPS
@@ -220,11 +229,11 @@ var Service struct {
 func newService() {
 	sec := Cfg.Section("service")
 	Service.ActiveCodeLives = sec.Key("ACTIVE_CODE_LIVE_MINUTES").MustInt(180)
-	Service.ResetPwdCodeLives = Cfg.MustInt("service", "RESET_PASSWD_CODE_LIVE_MINUTES", 180)
-	Service.DisableRegistration = Cfg.MustBool("service", "DISABLE_REGISTRATION")
-	Service.RequireSignInView = Cfg.MustBool("service", "REQUIRE_SIGNIN_VIEW")
-	Service.EnableCacheAvatar = Cfg.MustBool("service", "ENABLE_CACHE_AVATAR")
-	Service.EnableReverseProxyAuth = Cfg.MustBool("service", "ENABLE_REVERSE_PROXY_AUTHENTICATION")
+	Service.ResetPwdCodeLives = sec.Key("RESET_PASSWD_CODE_LIVE_MINUTES").MustInt(180)
+	Service.DisableRegistration = sec.Key("DISABLE_REGISTRATION").MustBool()
+	Service.RequireSignInView = sec.Key("REQUIRE_SIGNIN_VIEW").MustBool()
+	Service.EnableCacheAvatar = sec.Key("ENABLE_CACHE_AVATAR").MustBool()
+	Service.EnableReverseProxyAuth = sec.Key("ENABLE_REVERSE_PROXY_AUTHENTICATION").MustBool()
 }
 
 var logLevels = map[string]string{
@@ -240,18 +249,20 @@ func newLogService() {
 	log.Info("%s %s", AppName, AppVer)
 
 	// Get and check log mode.
-	LogModes = strings.Split(Cfg.MustValue("log", "MODE", "console"), ",")
+	LogModes = strings.Split(Cfg.Section("log").Key("MODE").MustString("console"), ",")
 	LogConfigs = make([]string, len(LogModes))
 	for i, mode := range LogModes {
 		mode = strings.TrimSpace(mode)
-		modeSec := "log." + mode
-		if _, err := Cfg.GetSection(modeSec); err != nil {
+		sec, err := Cfg.GetSection("log." + mode)
+		if err != nil {
 			log.Fatal(4, "Unknown log mode: %s", mode)
 		}
 
+		validLevels := []string{"Trace", "Debug", "Info", "Warn", "Error", "Critical"}
 		// Log level.
-		levelName := Cfg.MustValueRange("log."+mode, "LEVEL", "Trace",
-			[]string{"Trace", "Debug", "Info", "Warn", "Error", "Critical"})
+		levelName := Cfg.Section("log."+mode).Key("LEVEL").In(
+			Cfg.Section("log").Key("LEVEL").In("Trace", validLevels),
+			validLevels)
 		level, ok := logLevels[levelName]
 		if !ok {
 			log.Fatal(4, "Unknown log level: %s", levelName)
@@ -262,54 +273,54 @@ func newLogService() {
 		case "console":
 			LogConfigs[i] = fmt.Sprintf(`{"level":%s}`, level)
 		case "file":
-			logPath := Cfg.MustValue(modeSec, "FILE_NAME", path.Join(LogRootPath, "gogs.log"))
+			logPath := sec.Key("FILE_NAME").MustString(path.Join(LogRootPath, "gogs.log"))
 			os.MkdirAll(path.Dir(logPath), os.ModePerm)
 			LogConfigs[i] = fmt.Sprintf(
 				`{"level":%s,"filename":"%s","rotate":%v,"maxlines":%d,"maxsize":%d,"daily":%v,"maxdays":%d}`, level,
 				logPath,
-				Cfg.MustBool(modeSec, "LOG_ROTATE", true),
-				Cfg.MustInt(modeSec, "MAX_LINES", 1000000),
-				1<<uint(Cfg.MustInt(modeSec, "MAX_SIZE_SHIFT", 28)),
-				Cfg.MustBool(modeSec, "DAILY_ROTATE", true),
-				Cfg.MustInt(modeSec, "MAX_DAYS", 7))
+				sec.Key("LOG_ROTATE").MustBool(true),
+				sec.Key("MAX_LINES").MustInt(1000000),
+				1<<uint(sec.Key("MAX_SIZE_SHIFT").MustInt(28)),
+				sec.Key("DAILY_ROTATE").MustBool(true),
+				sec.Key("MAX_DAYS").MustInt(7))
 		case "conn":
 			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"reconnectOnMsg":%v,"reconnect":%v,"net":"%s","addr":"%s"}`, level,
-				Cfg.MustBool(modeSec, "RECONNECT_ON_MSG"),
-				Cfg.MustBool(modeSec, "RECONNECT"),
-				Cfg.MustValueRange(modeSec, "PROTOCOL", "tcp", []string{"tcp", "unix", "udp"}),
-				Cfg.MustValue(modeSec, "ADDR", ":7020"))
+				sec.Key("RECONNECT_ON_MSG").MustBool(),
+				sec.Key("RECONNECT").MustBool(),
+				sec.Key("PROTOCOL").In("tcp", []string{"tcp", "unix", "udp"}),
+				sec.Key("ADDR").MustString(":7020"))
 		case "smtp":
 			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"username":"%s","password":"%s","host":"%s","sendTos":"%s","subject":"%s"}`, level,
-				Cfg.MustValue(modeSec, "USER", "example@example.com"),
-				Cfg.MustValue(modeSec, "PASSWD", "******"),
-				Cfg.MustValue(modeSec, "HOST", "127.0.0.1:25"),
-				Cfg.MustValue(modeSec, "RECEIVERS", "[]"),
-				Cfg.MustValue(modeSec, "SUBJECT", "Diagnostic message from serve"))
+				sec.Key("USER").MustString("example@example.com"),
+				sec.Key("PASSWD").MustString("******"),
+				sec.Key("HOST").MustString("127.0.0.1:25"),
+				sec.Key("RECEIVERS").MustString("[]"),
+				sec.Key("SUBJECT").MustString("Diagnostic message from serve"))
 		case "database":
 			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"driver":"%s","conn":"%s"}`, level,
-				Cfg.MustValue(modeSec, "DRIVER"),
-				Cfg.MustValue(modeSec, "CONN"))
+				sec.Key("DRIVER").String(),
+				sec.Key("CONN").String())
 		}
 
-		log.NewLogger(Cfg.MustInt64("log", "BUFFER_LEN", 10000), mode, LogConfigs[i])
+		log.NewLogger(Cfg.Section("log").Key("BUFFER_LEN").MustInt64(10000), mode, LogConfigs[i])
 		log.Info("Log Mode: %s(%s)", strings.Title(mode), levelName)
 	}
 }
 
 func newCacheService() {
-	CacheAdapter = Cfg.MustValueRange("cache", "ADAPTER", "memory", []string{"memory", "redis", "memcache"})
+	CacheAdapter = Cfg.Section("cache").Key("ADAPTER").In("memory", []string{"memory", "redis", "memcache"})
 	if EnableRedis {
-		log.Info("Redis Enabled")
+		log.Info("Redis Supported")
 	}
 	if EnableMemcache {
-		log.Info("Memcache Enabled")
+		log.Info("Memcache Supported")
 	}
 
 	switch CacheAdapter {
 	case "memory":
-		CacheInternal = Cfg.MustInt("cache", "INTERVAL", 60)
+		CacheInternal = Cfg.Section("cache").Key("INTERVAL").MustInt(60)
 	case "redis", "memcache":
-		CacheConn = strings.Trim(Cfg.MustValue("cache", "HOST"), "\" ")
+		CacheConn = strings.Trim(Cfg.Section("cache").Key("HOST").String(), "\" ")
 	default:
 		log.Fatal(4, "Unknown cache adapter: %s", CacheAdapter)
 	}
@@ -332,48 +343,48 @@ func newSessionService() {
 
 // Mailer represents mail service.
 type Mailer struct {
-	Name         string
-	Host         string
-	From         string
-	User, Passwd string
-}
-
-type OauthInfo struct {
-	ClientId, ClientSecret string
-	Scopes                 string
-	AuthUrl, TokenUrl      string
-}
-
-// Oauther represents oauth service.
-type Oauther struct {
-	GitHub, Google, Tencent,
-	Twitter, Weibo bool
-	OauthInfos map[string]*OauthInfo
+	QueueLength       int
+	Name              string
+	Host              string
+	From              string
+	User, Passwd      string
+	DisableHelo       bool
+	HeloHostname      string
+	SkipVerify        bool
+	UseCertificate    bool
+	CertFile, KeyFile string
 }
 
 var (
-	MailService  *Mailer
-	OauthService *Oauther
+	MailService *Mailer
 )
 
 func newMailService() {
+	sec := Cfg.Section("mailer")
 	// Check mailer setting.
-	if !Cfg.MustBool("mailer", "ENABLED") {
+	if !sec.Key("ENABLED").MustBool() {
 		return
 	}
 
 	MailService = &Mailer{
-		Name:   Cfg.MustValue("mailer", "NAME", AppName),
-		Host:   Cfg.MustValue("mailer", "HOST"),
-		User:   Cfg.MustValue("mailer", "USER"),
-		Passwd: Cfg.MustValue("mailer", "PASSWD"),
+		QueueLength:    sec.Key("SEND_BUFFER_LEN").MustInt(100),
+		Name:           sec.Key("NAME").MustString(AppName),
+		Host:           sec.Key("HOST").String(),
+		User:           sec.Key("USER").String(),
+		Passwd:         sec.Key("PASSWD").String(),
+		DisableHelo:    sec.Key("DISABLE_HELO").MustBool(),
+		HeloHostname:   sec.Key("HELO_HOSTNAME").String(),
+		SkipVerify:     sec.Key("SKIP_VERIFY").MustBool(),
+		UseCertificate: sec.Key("USE_CERTIFICATE").MustBool(),
+		CertFile:       sec.Key("CERT_FILE").String(),
+		KeyFile:        sec.Key("KEY_FILE").String(),
 	}
-	MailService.From = Cfg.MustValue("mailer", "FROM", MailService.User)
+	MailService.From = sec.Key("FROM").MustString(MailService.User)
 	log.Info("Mail Service Enabled")
 }
 
 func newRegisterMailService() {
-	if !Cfg.MustBool("service", "REGISTER_EMAIL_CONFIRM") {
+	if !Cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").MustBool() {
 		return
 	} else if MailService == nil {
 		log.Warn("Register Mail Service: Mail Service is not enabled")
@@ -384,7 +395,7 @@ func newRegisterMailService() {
 }
 
 func newNotifyMailService() {
-	if !Cfg.MustBool("service", "ENABLE_NOTIFY_MAIL") {
+	if !Cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").MustBool() {
 		return
 	} else if MailService == nil {
 		log.Warn("Notify Mail Service: Mail Service is not enabled")

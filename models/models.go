@@ -46,15 +46,16 @@ var (
 )
 
 func LoadModelsConfig() {
-	DbCfg.Type = setting.Cfg.MustValue("database", "DB_TYPE")
-	DbCfg.Host = setting.Cfg.MustValue("database", "HOST")
-	DbCfg.Name = setting.Cfg.MustValue("database", "NAME")
-	DbCfg.User = setting.Cfg.MustValue("database", "USER")
+	sec := setting.Cfg.Section("database")
+	DbCfg.Type = sec.Key("DB_TYPE").String()
+	DbCfg.Host = sec.Key("HOST").String()
+	DbCfg.Name = sec.Key("NAME").String()
+	DbCfg.User = sec.Key("USER").String()
 	if len(DbCfg.Pwd) == 0 {
-		DbCfg.Pwd = setting.Cfg.MustValue("database", "PASSWD")
+		DbCfg.Pwd = sec.Key("PASSWD").String()
 	}
-	DbCfg.LogMode = setting.Cfg.MustValue("database", "LOG_MODE")
-	DbCfg.Path = setting.Cfg.MustValue("database", "PATH", "data/gogs.db")
+	DbCfg.LogMode = sec.Key("LOG_MODE").String()
+	DbCfg.Path = sec.Key("PATH").MustString("data/gogs.db")
 }
 
 func GetSession() (*mgo.Session, error) {
@@ -252,7 +253,7 @@ func removeDuplicate(slis *[]bson.ObjectId) {
 	*slis = (*slis)[:j]
 }
 
-func setTags(tags *[]string, aid bson.ObjectId) {
+func setTags(db *mgo.Database, tags *[]string, aid bson.ObjectId) {
 	for _, v := range *tags {
 		tag := &TagWrapper{
 			Name:       v,
@@ -260,6 +261,6 @@ func setTags(tags *[]string, aid bson.ObjectId) {
 			Count:      1,
 			ArticleIds: []bson.ObjectId{aid},
 		}
-		tag.SetTag()
+		tag.SetTag(db)
 	}
 }
