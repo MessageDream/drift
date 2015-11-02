@@ -11,7 +11,6 @@ import (
 	"github.com/MessageDream/drift/modules/base"
 	"github.com/MessageDream/drift/modules/middleware"
 	"github.com/MessageDream/drift/modules/setting"
-	"github.com/MessageDream/drift/routers/user"
 )
 
 const (

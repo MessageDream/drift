@@ -14,16 +14,16 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/goconfig"
 	"github.com/Unknwon/macaron"
+	"github.com/gogits/gogs/modules/cron"
+	"github.com/gogits/gogs/modules/social"
 
 	"github.com/MessageDream/drift/models"
 	"github.com/MessageDream/drift/modules/auth"
 	"github.com/MessageDream/drift/modules/base"
-	"github.com/MessageDream/drift/modules/cron"
 	"github.com/MessageDream/drift/modules/log"
 	"github.com/MessageDream/drift/modules/mailer"
 	"github.com/MessageDream/drift/modules/middleware"
 	"github.com/MessageDream/drift/modules/setting"
-	"github.com/MessageDream/drift/modules/social"
 )
 
 const (

@@ -7,10 +7,10 @@ package admin
 import (
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/core"
+	"github.com/gogits/gogs/modules/auth/ldap"
 
 	"github.com/MessageDream/drift/models"
 	"github.com/MessageDream/drift/modules/auth"
-	"github.com/MessageDream/drift/modules/auth/ldap"
 	"github.com/MessageDream/drift/modules/base"
 	"github.com/MessageDream/drift/modules/log"
 	"github.com/MessageDream/drift/modules/middleware"

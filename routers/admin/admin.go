@@ -12,10 +12,10 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/macaron"
+	"github.com/gogits/gogs/modules/cron"
 
 	"github.com/MessageDream/drift/models"
 	"github.com/MessageDream/drift/modules/base"
-	"github.com/MessageDream/drift/modules/cron"
 	"github.com/MessageDream/drift/modules/middleware"
 	"github.com/MessageDream/drift/modules/process"
 	"github.com/MessageDream/drift/modules/setting"
