@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	"github.com/Unknwon/goconfig"
+	"gopkg.in/ini.v1"
 	"github.com/macaron-contrib/session"
 
 	"github.com/MessageDream/drift/modules/log"
@@ -76,11 +76,10 @@ var (
 	EnableMemcache bool
 
 	// Session settings.
-	SessionProvider string
-	SessionConfig   *session.Config
+	SessionConfig   session.Options
 
 	// Global setting objects.
-	Cfg          *goconfig.ConfigFile
+	Cfg          *ini.File
 	ConfRootPath string
 	CustomPath   string // Custom directory path.
 	ProdMode     bool
@@ -318,23 +317,14 @@ func newCacheService() {
 }
 
 func newSessionService() {
-	SessionProvider = Cfg.MustValueRange("session", "PROVIDER", "memory",
+	SessionConfig.Provider = Cfg.Section("session").Key("PROVIDER").In("memory",
 		[]string{"memory", "file", "redis", "mysql"})
-
-	SessionConfig = new(session.Config)
-	SessionConfig.ProviderConfig = strings.Trim(Cfg.MustValue("session", "PROVIDER_CONFIG"), "\" ")
-	SessionConfig.CookieName = Cfg.MustValue("session", "COOKIE_NAME", "i_like_gogits")
-	SessionConfig.Secure = Cfg.MustBool("session", "COOKIE_SECURE")
-	SessionConfig.EnableSetCookie = Cfg.MustBool("session", "ENABLE_SET_COOKIE", true)
-	SessionConfig.Gclifetime = Cfg.MustInt64("session", "GC_INTERVAL_TIME", 86400)
-	SessionConfig.Maxlifetime = Cfg.MustInt64("session", "SESSION_LIFE_TIME", 86400)
-	SessionConfig.SessionIDHashFunc = Cfg.MustValueRange("session", "SESSION_ID_HASHFUNC",
-		"sha1", []string{"sha1", "sha256", "md5"})
-	SessionConfig.SessionIDHashKey = Cfg.MustValue("session", "SESSION_ID_HASHKEY", string(com.RandomCreateBytes(16)))
-
-	if SessionProvider == "file" {
-		os.MkdirAll(path.Dir(SessionConfig.ProviderConfig), os.ModePerm)
-	}
+	SessionConfig.ProviderConfig = strings.Trim(Cfg.Section("session").Key("PROVIDER_CONFIG").String(), "\" ")
+	SessionConfig.CookieName = Cfg.Section("session").Key("COOKIE_NAME").MustString("i_like_gogits")
+	SessionConfig.CookiePath = AppSubUrl
+	SessionConfig.Secure = Cfg.Section("session").Key("COOKIE_SECURE").MustBool()
+	SessionConfig.Gclifetime = Cfg.Section("session").Key("GC_INTERVAL_TIME").MustInt64(86400)
+	SessionConfig.Maxlifetime = Cfg.Section("session").Key("SESSION_LIFE_TIME").MustInt64(86400)
 
 	log.Info("Session Service Enabled")
 }
