@@ -4,8 +4,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/csrf"
+	"github.com/go-macaron/csrf"
+	"github.com/go-macaron/macaron"
 
 	"github.com/MessageDream/drift/modules/setting"
 )

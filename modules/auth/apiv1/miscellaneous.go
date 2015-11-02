@@ -7,8 +7,8 @@ package apiv1
 import (
 	"reflect"
 
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/i18n"
+	"github.com/go-macaron/i18n"
+	"github.com/go-macaron/macaron"
 
 	"github.com/MessageDream/drift/modules/auth"
 	"github.com/MessageDream/drift/modules/log"

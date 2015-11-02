@@ -11,7 +11,7 @@ import (
 	"path"
 
 	"github.com/Unknwon/com"
-	"github.com/Unknwon/macaron"
+	"github.com/go-macaron/macaron"
 
 	"github.com/MessageDream/drift/models"
 	"github.com/MessageDream/drift/modules/base"

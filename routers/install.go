@@ -13,9 +13,7 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/goconfig"
-	"github.com/Unknwon/macaron"
-	"github.com/gogits/gogs/modules/cron"
-	"github.com/gogits/gogs/modules/social"
+	"github.com/go-macaron/macaron"
 
 	"github.com/MessageDream/drift/models"
 	"github.com/MessageDream/drift/modules/auth"

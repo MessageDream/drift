@@ -9,12 +9,12 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/macaron-contrib/i18n"
-	"github.com/macaron-contrib/session"
+	"github.com/go-macaron/binding"
+	"github.com/go-macaron/i18n"
+	"github.com/go-macaron/session"
 
 	"github.com/MessageDream/drift/models"
 	"github.com/MessageDream/drift/modules/log"
-	"github.com/MessageDream/drift/modules/middleware/binding"
 	"github.com/MessageDream/drift/modules/setting"
 )
 

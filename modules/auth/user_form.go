@@ -5,10 +5,9 @@
 package auth
 
 import (
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/i18n"
-
-	"github.com/MessageDream/drift/modules/middleware/binding"
+	"github.com/go-macaron/binding"
+	"github.com/go-macaron/i18n"
+	"github.com/go-macaron/macaron"
 )
 
 type InstallForm struct {

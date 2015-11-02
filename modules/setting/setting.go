@@ -1,6 +1,6 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
+// license that can be found in the license file.
 
 package setting
 
@@ -14,11 +14,10 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	"gopkg.in/ini.v1"
 	"github.com/macaron-contrib/session"
+	"gopkg.in/ini.v1"
 
 	"github.com/MessageDream/drift/modules/log"
-	// "github.com/MessageDream/drift-ng/modules/ssh"
 )
 
 type Scheme string
@@ -76,7 +75,7 @@ var (
 	EnableMemcache bool
 
 	// Session settings.
-	SessionConfig   session.Options
+	SessionConfig session.Options
 
 	// Global setting objects.
 	Cfg          *ini.File
@@ -120,7 +119,7 @@ func NewConfigContext() {
 	}
 	ConfRootPath = path.Join(workDir, "conf")
 
-	Cfg, err = goconfig.LoadConfigFile(path.Join(workDir, "conf/app.ini"))
+	Cfg, err = ini.Load(path.Join(workDir, "conf/app.ini"))
 	if err != nil {
 		log.Fatal(4, "Fail to parse 'conf/app.ini': %v", err)
 	}
@@ -132,42 +131,44 @@ func NewConfigContext() {
 
 	cfgPath := path.Join(CustomPath, "conf/app.ini")
 	if com.IsFile(cfgPath) {
-		if err = Cfg.AppendFiles(cfgPath); err != nil {
+		if err = Cfg.Append(cfgPath); err != nil {
 			log.Fatal(4, "Fail to load custom 'conf/app.ini': %v", err)
 		}
 	} else {
 		log.Warn("No custom 'conf/app.ini' found, please go to '/install'")
 	}
 
-	AppName = Cfg.MustValue("", "APP_NAME", "Gogs: Go Git Service")
-	AppLogo = Cfg.MustValue("", "APP_LOGO", "img/favicon.png")
-	AppUrl = Cfg.MustValue("server", "ROOT_URL", "http://localhost:3000/")
+	AppName = Cfg.Section("").Key("APP_NAME").MustString("drift: blog")
+	AppLogo = Cfg.Section("").Key("APP_LOGO").MustString("img/favicon.png")
+	sec := Cfg.Section("server")
+	AppUrl = sec.Key("ROOT_URL").MustString("http://localhost:3000/")
 	if AppUrl[len(AppUrl)-1] != '/' {
 		AppUrl += "/"
 	}
 
 	Protocol = HTTP
-	if Cfg.MustValue("server", "PROTOCOL") == "https" {
+	if sec.Key("PROTOCOL").String() == "https" {
 		Protocol = HTTPS
-		CertFile = Cfg.MustValue("server", "CERT_FILE")
-		KeyFile = Cfg.MustValue("server", "KEY_FILE")
+		CertFile = sec.Key("CERT_FILE").String()
+		KeyFile = sec.Key("KEY_FILE").String()
 	}
-	Domain = Cfg.MustValue("server", "DOMAIN", "localhost")
-	HttpAddr = Cfg.MustValue("server", "HTTP_ADDR", "0.0.0.0")
-	HttpPort = Cfg.MustValue("server", "HTTP_PORT", "3000")
-	SshPort = Cfg.MustInt("server", "SSH_PORT", 22)
-	OfflineMode = Cfg.MustBool("server", "OFFLINE_MODE")
-	DisableRouterLog = Cfg.MustBool("server", "DISABLE_ROUTER_LOG")
-	StaticRootPath = Cfg.MustValue("server", "STATIC_ROOT_PATH", workDir)
-	LogRootPath = Cfg.MustValue("log", "ROOT_PATH", path.Join(workDir, "log"))
-	EnableGzip = Cfg.MustBool("server", "ENABLE_GZIP")
+	Domain = sec.Key("DOMAIN").MustString("localhost")
+	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
+	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
+	SshPort = sec.Key("SSH_PORT").MustInt(22)
+	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
+	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
+	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)
+	EnableGzip = sec.Key("ENABLE_GZIP").MustBool()
+	LogRootPath = Cfg.Section("log").Key("ROOT_PATH").MustString(path.Join(workDir, "log"))
 
-	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK")
-	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
-	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
-	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
-	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
-	ReverseProxyAuthUser = Cfg.MustValue("security", "REVERSE_PROXY_AUTHENTICATION_USER", "X-WEBAUTH-USER")
+	secSection := Cfg.Section("security")
+	InstallLock = secSection.Key("INSTALL_LOCK").MustBool()
+	SecretKey = secSection.Key("SECRET_KEY").String()
+	LogInRememberDays = secSection.Key("LOGIN_REMEMBER_DAYS").MustInt(7)
+	CookieUserName = secSection.Key("COOKIE_USERNAME").String()
+	CookieRememberName = secSection.Key("COOKIE_REMEMBER_NAME").String()
+	ReverseProxyAuthUser = secSection.Key("REVERSE_PROXY_AUTHENTICATION_USER").MustString("X-WEBAUTH-USER")
 
 	TimeFormat = map[string]string{
 		"ANSIC":       time.ANSIC,
@@ -185,9 +186,9 @@ func NewConfigContext() {
 		"StampMilli":  time.StampMilli,
 		"StampMicro":  time.StampMicro,
 		"StampNano":   time.StampNano,
-	}[Cfg.MustValue("time", "FORMAT", "RFC1123")]
+	}[Cfg.Section("time").Key("FORMAT").MustString("RFC1123")]
 
-	RunUser = Cfg.MustValue("", "RUN_USER")
+	RunUser = Cfg.Section("").Key("RUN_USER").String()
 	curUser := os.Getenv("USER")
 	if len(curUser) == 0 {
 		curUser = os.Getenv("USERNAME")
@@ -197,12 +198,11 @@ func NewConfigContext() {
 		log.Fatal(4, "Expect user(%s) but current user is: %s", RunUser, curUser)
 	}
 
-	PictureService = Cfg.MustValueRange("picture", "SERVICE", "server",
-		[]string{"server"})
-	DisableGravatar = Cfg.MustBool("picture", "DISABLE_GRAVATAR")
+	PictureService = sec.Key("SERVICE").In("server", []string{"server"})
+	DisableGravatar = Cfg.Section("picture").Key("DISABLE_GRAVATAR").MustBool()
 
-	Langs = Cfg.MustValueArray("i18n", "LANGS", ",")
-	Names = Cfg.MustValueArray("i18n", "NAMES", ",")
+	Langs = Cfg.Section("i18n").Key("LANGS").Strings(",")
+	Names = Cfg.Section("i18n").Key("NAMES").Strings(",")
 }
 
 var Service struct {
@@ -218,7 +218,8 @@ var Service struct {
 }
 
 func newService() {
-	Service.ActiveCodeLives = Cfg.MustInt("service", "ACTIVE_CODE_LIVE_MINUTES", 180)
+	sec := Cfg.Section("service")
+	Service.ActiveCodeLives = sec.Key("ACTIVE_CODE_LIVE_MINUTES").MustInt(180)
 	Service.ResetPwdCodeLives = Cfg.MustInt("service", "RESET_PASSWD_CODE_LIVE_MINUTES", 180)
 	Service.DisableRegistration = Cfg.MustBool("service", "DISABLE_REGISTRATION")
 	Service.RequireSignInView = Cfg.MustBool("service", "REQUIRE_SIGNIN_VIEW")

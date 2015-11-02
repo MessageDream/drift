@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/cache"
-	"github.com/macaron-contrib/i18n"
-	"github.com/macaron-contrib/session"
+	"github.com/go-macaron/cache"
+	"github.com/go-macaron/i18n"
+	"github.com/go-macaron/macaron"
+	"github.com/go-macaron/session"
 	mgo "gopkg.in/mgo.v2"
 
 	"github.com/MessageDream/drift/models"
@@ -141,25 +141,25 @@ func (ctx *Context) ServeContent(name string, r io.ReadSeeker, params ...interfa
 
 // Contexter initializes a classic context for a request.
 func Contexter() macaron.Handler {
-	return func(c *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash,	dbSession *mgo.Session,db *mgo.Database) {
+	return func(c *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash, dbSession *mgo.Session, db *mgo.Database) {
 
 		ctx := &Context{
-			Context: c,
-			Locale:  l,
-			Cache:   cache,
-			Flash:   f,
-			Session: sess,
-			DbSession:dbSession,
-			Db :db,
+			Context:   c,
+			Locale:    l,
+			Cache:     cache,
+			Flash:     f,
+			Session:   sess,
+			DbSession: dbSession,
+			Db:        db,
 		}
-//		dbSession, err := models.GetSession()
-//		if err != nil {
-//			log.Error("Get DbSession error:%v", err)
-//			ctx.Handle(500, "Get DbSession", err)
-//			return
-//		}
-//		ctx.DbSession = dbSession
-//		ctx.Db = models.GetDb(dbSession)
+		//		dbSession, err := models.GetSession()
+		//		if err != nil {
+		//			log.Error("Get DbSession error:%v", err)
+		//			ctx.Handle(500, "Get DbSession", err)
+		//			return
+		//		}
+		//		ctx.DbSession = dbSession
+		//		ctx.Db = models.GetDb(dbSession)
 		// Compute current URL for real-time change language.
 		link := ctx.Req.RequestURI
 		i := strings.Index(link, "?")
